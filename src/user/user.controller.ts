@@ -1,60 +1,49 @@
 /* eslint-disable prettier/prettier */
 import { Body, Controller, Delete, Get, Post, Put, Req } from "@nestjs/common";
-import { NOTFOUND } from "dns";
 import { Request } from "express";
 import { UserModel } from "./usermodel";
+import { UserService } from "./user.service";
 
 @Controller('user')
 export class UserController {
     userList: Array<UserModel>;
 
-    constructor() {
+    constructor(private userService: UserService) {
 
     }
 
     @Get('getall')
-    GetAll() {
+    async GetAll() {
+        this.userList = await this.userService.GetAll();
         this.userList?.forEach(t => delete t.password)
         return this.userList;
     }
 
     @Get('getbyid/:id')
-    GetById(@Req() req: Request) {
-        console.log(req.body)
-        const _user = this.userList.find(t => t.id == parseInt(req.params.id));
-
+   async GetById(@Req() req: Request) {
+        const _user = await this.userService.GetById(parseInt(req.params.id));
         if (!_user) {
-            return NOTFOUND;
+            return { error: 'User not found' };
         }
         return _user;
     }
 
     @Post('add')
-    Add(@Body() userModel: UserModel) {
-        if (!this.userList) {
-            this.userList = new Array<UserModel>();
-        }
-
-        userModel.id = this.userList.length + 1;
-        this.userList.push(userModel);
-        return userModel;
+    async Add(@Body() userModel: UserModel) {
+        const user = await this.userService.Insert(userModel);
+        return user;
     }
 
     @Put('update')
-    Update(@Body() userModel: UserModel) {
-        const _user = this.userList.find(t => t.id === userModel.id);
-
-        if (!_user) {
-            return NOTFOUND;
-        }
-        Object.assign(this.userList.find(t => t.id === userModel.id), userModel);
+    async Update(@Body() userModel: UserModel) {
+        const _user = await this.userService.Update(userModel);
         return _user;
     }
 
 
     @Delete('delete/:id')
-    Delete(@Req() req: Request) {
-        this.userList = this.userList?.filter(t => t.id != parseInt(req.params.id))
+   async Delete(@Req() req: Request) {
+        await this.userService.Delete(parseInt(req.params.id))
         return { Message: "Delete success" };
     }
 
